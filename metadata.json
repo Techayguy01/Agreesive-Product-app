@@ -1,6 +1,6 @@
 {
   "name": "GRIND",
   "description": "Aggressive Productivity Tracker",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": []
 }

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { analyzeLogEntry } from '../lib/gemini';
 import { format } from 'date-fns';
-import { Clock, Zap, AlertTriangle } from 'lucide-react';
+import { Clock, Zap, AlertTriangle, Mic, MicOff, Ghost } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,8 @@ export function Home() {
   const [logText, setLogText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [nextPing, setNextPing] = useState(60);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,6 +25,16 @@ export function Home() {
   const today = format(new Date(), 'yyyy-MM-dd');
   const todaySleep = sleepLogs.find(l => l.date === today);
 
+  // Calculate Ghost Score for current hour
+  const currentHour = new Date().getHours();
+  const pastLogsThisHour = hourlyLogs.filter(l => {
+    const d = new Date(l.timestamp);
+    return d.getHours() === currentHour && format(d, 'yyyy-MM-dd') !== today && l.ai_score !== null;
+  });
+  const ghostScore = pastLogsThisHour.length > 0
+    ? pastLogsThisHour.reduce((sum, l) => sum + (l.ai_score || 0), 0) / pastLogsThisHour.length
+    : null;
+
   useEffect(() => {
     const timer = setInterval(() => {
       setNextPing(prev => prev > 0 ? prev - 1 : 60);
@@ -33,6 +45,11 @@ export function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!logText.trim() || isSubmitting) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
 
     setIsSubmitting(true);
     const timestamp = new Date().toISOString();
@@ -54,7 +71,7 @@ export function Home() {
     setNextPing(60);
 
     // Background analysis
-    const analysis = await analyzeLogEntry(logText, hourlyLogs, goals, todaySleep?.wake_time || null);
+    const analysis = await analyzeLogEntry(logText, hourlyLogs, goals, todaySleep?.wake_time || null, ghostScore);
     
     if (analysis) {
       const logs = useStore.getState().hourlyLogs;
@@ -75,8 +92,43 @@ export function Home() {
     setIsSubmitting(false);
   };
 
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    
+    let startText = logText;
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0].transcript)
+        .join('');
+      
+      const combined = startText ? `${startText} ${transcript}` : transcript;
+      setLogText(combined.slice(0, 200));
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
   return (
-    <div className="p-6 pt-12 flex flex-col h-full">
+    <div className="p-6 pt-12 flex flex-col min-h-full">
       <header className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-4xl font-black uppercase tracking-tighter text-[#FF4444]">GRIND</h1>
@@ -89,6 +141,15 @@ export function Home() {
       </header>
 
       <div className="bg-[#151619] rounded-xl p-6 mb-8 border border-[#333] relative overflow-hidden">
+        {ghostScore !== null && (
+          <div className="absolute top-4 right-4 text-right">
+            <div className="flex items-center gap-1 text-[#8E9299] mb-1 justify-end">
+              <Ghost size={12} />
+              <span className="text-[10px] uppercase font-bold tracking-widest">Ghost Target</span>
+            </div>
+            <div className="text-xl font-black font-mono text-[#8E9299]">{ghostScore.toFixed(1)}</div>
+          </div>
+        )}
         <div className="absolute top-0 left-0 w-full h-1 bg-[#333]">
           <div 
             className="h-full bg-[#FF4444] transition-all duration-1000" 
@@ -105,13 +166,26 @@ export function Home() {
 
       <form onSubmit={handleSubmit} className="mb-8">
         <label className="block text-xs uppercase tracking-widest font-bold text-[#8E9299] mb-2">What did you just do?</label>
-        <textarea
-          value={logText}
-          onChange={(e) => setLogText(e.target.value)}
-          placeholder="I spent 45 mins deep working on the architecture..."
-          className="w-full bg-[#151619] border border-[#333] rounded-xl p-4 text-[#F5F5F5] font-mono focus:outline-none focus:border-[#FF4444] resize-none h-32"
-          maxLength={200}
-        />
+        <div className="relative">
+          <textarea
+            value={logText}
+            onChange={(e) => setLogText(e.target.value)}
+            placeholder="I spent 45 mins deep working on the architecture..."
+            className="w-full bg-[#151619] border border-[#333] rounded-xl p-4 text-[#F5F5F5] font-mono focus:outline-none focus:border-[#FF4444] resize-none h-32"
+            maxLength={200}
+          />
+          <button
+            type="button"
+            onClick={toggleListening}
+            className={cn(
+              "absolute bottom-4 right-4 p-2 rounded-full transition-colors",
+              isListening ? "bg-[#FF4444] text-black animate-pulse" : "bg-[#333] text-[#8E9299] hover:text-white"
+            )}
+            title="Dictate log"
+          >
+            {isListening ? <Mic size={18} /> : <MicOff size={18} />}
+          </button>
+        </div>
         <button 
           type="submit"
           disabled={!logText.trim() || isSubmitting}

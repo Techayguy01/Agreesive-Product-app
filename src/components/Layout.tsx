@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 export function Layout() {
   return (
     <div className="flex flex-col h-screen bg-[#0A0A0A] text-[#F5F5F5] font-sans overflow-hidden">
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="flex-1 overflow-y-auto pb-24">
         <Outlet />
       </main>
       

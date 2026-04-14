@@ -1,5 +1,5 @@
 import { useStore } from '../store/useStore';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, ScatterChart, Scatter, ZAxis } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart } from 'recharts';
 import { format, subDays } from 'date-fns';
 
 export function Dashboard() {
@@ -15,9 +15,20 @@ export function Dashboard() {
       const logHour = new Date(l.timestamp).getHours();
       return logHour === i;
     });
+    
+    // Calculate ghost score for this hour
+    const pastLogs = hourlyLogs.filter(l => {
+      const d = new Date(l.timestamp);
+      return d.getHours() === i && format(d, 'yyyy-MM-dd') !== today && l.ai_score !== null;
+    });
+    const ghostScore = pastLogs.length > 0
+      ? pastLogs.reduce((sum, l) => sum + (l.ai_score || 0), 0) / pastLogs.length
+      : 0;
+
     return {
       hour: `${hourStr}:00`,
       score: log?.ai_score || 0,
+      ghost: ghostScore,
       hasLog: !!log
     };
   });
@@ -35,10 +46,16 @@ export function Dashboard() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const score = payload.find((p: any) => p.dataKey === 'score')?.value;
+      const ghost = payload.find((p: any) => p.dataKey === 'ghost')?.value;
+      const alignment = payload.find((p: any) => p.dataKey === 'alignment')?.value;
+
       return (
         <div className="bg-[#151619] border border-[#333] p-3 rounded-lg shadow-xl">
           <p className="text-xs font-mono text-[#8E9299] mb-1">{label}</p>
-          <p className="text-[#FF4444] font-bold">Score: {payload[0].value}</p>
+          {score !== undefined && <p className="text-[#FF4444] font-bold">Score: {score}</p>}
+          {ghost > 0 && <p className="text-[#8E9299] font-bold">Ghost: {ghost.toFixed(1)}</p>}
+          {alignment !== undefined && <p className="text-[#4CAF50] font-bold">Align: {alignment}%</p>}
         </div>
       );
     }
@@ -55,10 +72,22 @@ export function Dashboard() {
       <div className="space-y-6">
         {/* Today's Score Card */}
         <div className="bg-[#151619] border border-[#333] rounded-xl p-5">
-          <h2 className="text-xs uppercase tracking-widest font-bold text-[#8E9299] mb-4">Today's Output</h2>
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-xs uppercase tracking-widest font-bold text-[#8E9299]">Today's Output</h2>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-[#FF4444]"></div>
+                <span className="text-[9px] uppercase font-bold text-[#8E9299]">You</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-[#8E9299]"></div>
+                <span className="text-[9px] uppercase font-bold text-[#8E9299]">Ghost</span>
+              </div>
+            </div>
+          </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyData}>
+              <ComposedChart data={hourlyData}>
                 <XAxis dataKey="hour" tick={{ fontSize: 10, fill: '#555' }} axisLine={false} tickLine={false} interval={3} />
                 <YAxis hide domain={[0, 10]} />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: '#222' }} />
@@ -74,7 +103,8 @@ export function Dashboard() {
                     return <rect x={x} y={y} width={width} height={height} fill="#FF4444" rx={4} ry={4} />;
                   }}
                 />
-              </BarChart>
+                <Line type="monotone" dataKey="ghost" stroke="#8E9299" strokeDasharray="3 3" dot={false} strokeWidth={2} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>

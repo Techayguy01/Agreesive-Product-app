@@ -18,7 +18,8 @@ export async function analyzeLogEntry(
   currentLog: string,
   recentLogs: HourlyLog[],
   activeGoals: Goal[],
-  wakeTime: string | null
+  wakeTime: string | null,
+  ghostScore: number | null
 ) {
   const prompt = `
 You are the AI Analysis Engine for GRIND, an aggressive productivity tracker.
@@ -29,13 +30,14 @@ Context:
 - Recent Logs: ${JSON.stringify(recentLogs.slice(-5).map(l => l.text))}
 - Current Log: "${currentLog}"
 - Wake Time: ${wakeTime || 'Unknown'}
+- Ghost Score (Your historical average for this hour): ${ghostScore !== null ? ghostScore.toFixed(1) + '/10' : 'No historical data yet'}
 
 Return a JSON object with the following structure:
 {
   "hourly_score": number (0-10, be harsh but fair),
   "effort_category": string ("Deep Work" | "Admin" | "Distraction" | "Rest"),
   "goal_alignment_pct": number (0-100, how much does this align with active goals?),
-  "insight": string (1 sharp, aggressive, confrontational sentence),
+  "insight": string (1 sharp, aggressive, confrontational sentence. If Ghost Score is available and the user's effort seems lower than the Ghost Score, TAUNT THEM mercilessly for losing to their past self. If they beat the ghost, acknowledge it aggressively.),
   "warning": string | null (if a bad pattern is detected, e.g., "You've been doing admin for 3 hours. Stop."),
   "daily_projection": string ("On track" | "At risk" | "Off track")
 }
