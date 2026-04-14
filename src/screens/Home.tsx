@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { analyzeLogEntry } from '../lib/gemini';
+import { analyzeLogEntry } from '../lib/groq';
 import { format } from 'date-fns';
 import { Clock, Zap, AlertTriangle, Mic, MicOff, Ghost } from 'lucide-react';
 import { cn } from '../lib/utils';

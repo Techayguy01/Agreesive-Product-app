@@ -9,7 +9,7 @@ Follow these steps to get the project running on your local machine in under 5 m
 ### Prerequisites
 *   Node.js (v18 or higher)
 *   npm (v9 or higher)
-*   A Google Gemini API Key
+*   A Groq API key
 
 ### 1. Clone & Install
 ```bash
@@ -19,15 +19,15 @@ npm install
 ```
 
 ### 2. Environment Setup
-Create a `.env` file in the root directory and add your Gemini API key:
+Create a `.env` file in the root directory and add your Groq API key:
 ```bash
 cp .env.example .env
 ```
 Edit `.env`:
 ```env
-VITE_GEMINI_API_KEY="your_actual_api_key_here"
+GROQ_API_KEY="your_actual_api_key_here"
 ```
-*(Note: In the AI Studio environment, this is injected automatically as `process.env.GEMINI_API_KEY`, but for local Vite development outside of AI Studio, you would typically use `VITE_GEMINI_API_KEY` and `import.meta.env`.)*
+The app currently uses Groq's `llama-3.3-70b-versatile` model for log analysis.
 
 ### 3. Run the Development Server
 ```bash
@@ -43,8 +43,8 @@ The app will be available at `http://localhost:3000` (or the port specified by V
 
 ## Common Pitfalls & Troubleshooting
 
-*   **"White Screen on Load" / Gemini API Error:**
-    Ensure your API key is correctly set in the environment. The app uses lazy initialization for the Gemini client, so it will throw a clear console error if the key is missing when you try to log an entry.
+*   **"White Screen on Load" / Groq API Error:**
+    Ensure your API key is correctly set in the environment. The app checks for `GROQ_API_KEY` when you try to log an entry.
 *   **Microphone Not Working:**
     1. Ensure you are accessing the app via `https://` or `localhost` (browsers block microphone access on insecure HTTP connections).
     2. Check browser permissions (the little lock icon in the URL bar) to ensure Microphone access is set to "Allow".

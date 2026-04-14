@@ -4,13 +4,14 @@ GRIND is a client-side application. It does not expose internal REST APIs. Inste
 
 ## External Dependencies
 
-### 1. Google Gemini API
+### 1. Groq API
 *   **Purpose:** Analyzes user logs, scores productivity, and generates insights.
-*   **Endpoint:** `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent` (Handled via `@google/genai` SDK).
-*   **Credentials:** Requires a `GEMINI_API_KEY`.
+*   **Endpoint:** `https://api.groq.com/openai/v1/chat/completions`.
+*   **Model:** `llama-3.3-70b-versatile`.
+*   **Credentials:** Requires a `GROQ_API_KEY`.
 
-**Expected JSON Schema Response:**
-When the app sends a log to Gemini, it strictly enforces this JSON schema response:
+**Expected JSON Response:**
+When the app sends a log to Groq, it requests JSON mode and normalizes this response:
 ```json
 {
   "type": "OBJECT",
@@ -37,5 +38,5 @@ The core "API" for the frontend components is the Zustand store (`useStore`).
 **Key Methods:**
 *   `addGoal(goal: Omit<Goal, 'id' | 'created_at'>)`: Adds a new target to the hierarchy.
 *   `addHourlyLog(log: Omit<HourlyLog, 'id'>)`: Submits a new log and triggers the streak calculation.
-*   `updateHourlyLog(id: string, updates: Partial<HourlyLog>)`: Used to append AI analysis data to a log after the Gemini API returns.
+*   `updateHourlyLog(id: string, updates: Partial<HourlyLog>)`: Used to append AI analysis data to a log after the Groq API returns.
 *   `updateDailyScore(date: string)`: Recalculates the day's average score and alignment based on all logs for that date.
