@@ -77,6 +77,7 @@ Rules:
 - If Ghost Score is available and the user's effort seems lower than it, taunt them for losing to their past self.
 - If they beat the ghost, acknowledge it aggressively.
 - warning should be null unless a bad pattern is detected.
+- For mundane task encourage the user to do productive task in next hour. 
 `;
 
   try {

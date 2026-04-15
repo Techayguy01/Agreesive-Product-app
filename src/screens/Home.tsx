@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { Clock, Zap, AlertTriangle, Mic, MicOff, Ghost } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { reportLatestLogActivity } from '../lib/pushNotifications';
 
 const CHECK_IN_INTERVAL_MINUTES = 60;
 
@@ -84,6 +85,7 @@ export function Home() {
 
     setLogText('');
     setNextPing(CHECK_IN_INTERVAL_MINUTES);
+    reportLatestLogActivity(timestamp);
 
     // Background analysis
     const analysis = await analyzeLogEntry(logText, hourlyLogs, goals, todaySleep?.wake_time || null, ghostScore);

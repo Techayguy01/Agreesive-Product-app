@@ -24,7 +24,16 @@
 *   *Pros:* Fast response times are a good fit for quick hourly logging, and JSON mode keeps parsing predictable.
 *   *Cons:* The prompt must include all context (recent logs, goals) every time, which increases token usage per request. The browser-based API key is visible in built client code, so a small backend proxy would be safer for a public deployment.
 
+## ADR 4: Web Push Backend for Closed-Device Reminders
+**Date:** April 2026
+**Context:** The user needs aggressive reminders when the mobile device is locked or the PWA is closed. Browser timers cannot reliably run after a mobile tab is suspended.
+**Decision:** We added a small Express backend using Web Push and VAPID keys. The frontend registers a browser `PushSubscription`, reports the latest log timestamp, and the backend sends escalating reminders after idle windows.
+**Consequences:**
+*   *Pros:* Keeps the app as a web/PWA product, avoids app stores, and supports closed-device notification delivery when the browser/OS permits it.
+*   *Cons:* Requires a running backend, HTTPS in production, notification permission, and OS/browser support. iOS generally requires installing the PWA to the Home Screen. Delivery timing may be delayed by mobile battery policies.
+
 ## Future Roadmap & Technical Debt
 1.  **Sync Engine:** The app is currently bound to a single browser. We need to implement a CRDT-based sync engine (e.g., Yjs or ElectricSQL) to allow cross-device usage.
 2.  **Timezone Handling:** Currently relying on `date-fns` and local browser time. If a user travels across timezones, the "Daily Score" boundaries might skew.
 3.  **API Key Proxy:** Move Groq calls behind a small serverless endpoint before any public deployment.
+4.  **Push User Accounts:** Push state is currently single-user. Add authentication before supporting multiple users/devices with independent reminder schedules.

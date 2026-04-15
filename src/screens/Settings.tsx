@@ -1,6 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
+import {
+  disableAggressiveNotifications,
+  enableAggressiveNotifications,
+  getPushSubscriptionStatus,
+  PushStatus,
+} from '../lib/pushNotifications';
 
 export function Settings() {
   const { sleepLogs, setWakeTime, setSleepTime, nukeDatabase } = useStore();
@@ -10,6 +16,21 @@ export function Settings() {
   const [wakeInput, setWakeInput] = useState(todaySleep?.wake_time ? format(new Date(todaySleep.wake_time), 'HH:mm') : '');
   const [sleepInput, setSleepInput] = useState(todaySleep?.sleep_time ? format(new Date(todaySleep.sleep_time), 'HH:mm') : '');
   const [isNuking, setIsNuking] = useState(false);
+  const [pushStatus, setPushStatus] = useState<PushStatus>('default');
+  const [pushMessage, setPushMessage] = useState('');
+  const [isPushBusy, setIsPushBusy] = useState(false);
+
+  const refreshPushStatus = async () => {
+    try {
+      setPushStatus(await getPushSubscriptionStatus());
+    } catch (error) {
+      setPushStatus('unsupported');
+    }
+  };
+
+  useEffect(() => {
+    refreshPushStatus();
+  }, []);
 
   const handleWakeSave = () => {
     if (!wakeInput) return;
@@ -25,6 +46,36 @@ export function Settings() {
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     setSleepTime(today, date.toISOString());
+  };
+
+  const handleEnablePush = async () => {
+    setIsPushBusy(true);
+    setPushMessage('');
+
+    try {
+      await enableAggressiveNotifications();
+      setPushMessage('Aggressive mobile reminders are armed.');
+    } catch (error) {
+      setPushMessage(error instanceof Error ? error.message : 'Could not enable notifications.');
+    } finally {
+      await refreshPushStatus();
+      setIsPushBusy(false);
+    }
+  };
+
+  const handleDisablePush = async () => {
+    setIsPushBusy(true);
+    setPushMessage('');
+
+    try {
+      await disableAggressiveNotifications();
+      setPushMessage('Aggressive mobile reminders are disabled on this device.');
+    } catch (error) {
+      setPushMessage(error instanceof Error ? error.message : 'Could not disable notifications.');
+    } finally {
+      await refreshPushStatus();
+      setIsPushBusy(false);
+    }
   };
 
   return (
@@ -81,6 +132,47 @@ export function Settings() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="bg-[#151619] border border-[#333] rounded-xl p-5">
+          <h2 className="text-xs uppercase tracking-widest font-bold text-[#8E9299] mb-4">Aggressive Mobile Reminders</h2>
+          <p className="text-sm text-[#8E9299] font-mono mb-4">
+            Web Push reminders fire from the server after your last log goes stale, even when the PWA is closed, if your browser and OS allow it.
+          </p>
+
+          <div className="mb-4 p-3 bg-black rounded-lg border border-[#333]">
+            <p className="text-xs font-mono text-[#8E9299]">
+              Status: <span className="text-white font-bold uppercase">{pushStatus}</span>
+            </p>
+          </div>
+
+          {pushStatus === 'enabled' ? (
+            <button
+              onClick={handleDisablePush}
+              disabled={isPushBusy}
+              className="w-full bg-[#333] text-white py-3 rounded-lg text-xs uppercase font-bold hover:bg-[#444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isPushBusy ? 'Disarming...' : 'Disable Notifications'}
+            </button>
+          ) : (
+            <button
+              onClick={handleEnablePush}
+              disabled={isPushBusy || pushStatus === 'unsupported' || pushStatus === 'denied'}
+              className="w-full bg-[#FF4444] text-black py-3 rounded-lg text-xs uppercase font-black hover:bg-[#ff6666] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isPushBusy ? 'Arming...' : 'Enable Aggressive Notifications'}
+            </button>
+          )}
+
+          {pushMessage && (
+            <p className="mt-3 text-xs font-mono text-[#8E9299]">{pushMessage}</p>
+          )}
+
+          {pushStatus === 'denied' && (
+            <p className="mt-3 text-xs font-mono text-[#FF4444]">
+              Notifications are blocked in browser settings. Re-enable site notifications, then come back here.
+            </p>
+          )}
         </div>
 
         <div className="bg-[#151619] border border-[#333] rounded-xl p-5">

@@ -13,6 +13,9 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['apple-touch-icon.png'],
+        workbox: {
+          importScripts: ['push-sw.js'],
+        },
         manifest: {
           name: 'GRIND Tracker',
           short_name: 'GRIND',
@@ -49,6 +52,9 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+      proxy: {
+        '/api': 'http://localhost:4000',
+      },
     },
   };
 });
