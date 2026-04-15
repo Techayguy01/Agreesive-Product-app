@@ -3,12 +3,13 @@ import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 
 export function Settings() {
-  const { sleepLogs, setWakeTime, setSleepTime } = useStore();
+  const { sleepLogs, setWakeTime, setSleepTime, nukeDatabase } = useStore();
   const today = format(new Date(), 'yyyy-MM-dd');
   const todaySleep = sleepLogs.find(l => l.date === today);
 
   const [wakeInput, setWakeInput] = useState(todaySleep?.wake_time ? format(new Date(todaySleep.wake_time), 'HH:mm') : '');
   const [sleepInput, setSleepInput] = useState(todaySleep?.sleep_time ? format(new Date(todaySleep.sleep_time), 'HH:mm') : '');
+  const [isNuking, setIsNuking] = useState(false);
 
   const handleWakeSave = () => {
     if (!wakeInput) return;
@@ -85,15 +86,17 @@ export function Settings() {
         <div className="bg-[#151619] border border-[#333] rounded-xl p-5">
           <h2 className="text-xs uppercase tracking-widest font-bold text-[#8E9299] mb-4">Danger Zone</h2>
           <button 
-            onClick={() => {
+            onClick={async () => {
               if(window.confirm("This will wipe all local data. Are you sure?")) {
-                localStorage.clear();
+                setIsNuking(true);
+                await nukeDatabase();
                 window.location.reload();
               }
             }}
+            disabled={isNuking}
             className="w-full border border-[#FF4444] text-[#FF4444] py-3 rounded-lg text-xs uppercase font-bold hover:bg-[#FF4444]/10 transition-colors"
           >
-            Nuke Database
+            {isNuking ? 'Nuking...' : 'Nuke Database'}
           </button>
         </div>
       </div>

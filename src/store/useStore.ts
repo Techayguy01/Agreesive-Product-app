@@ -37,17 +37,22 @@ interface AppState {
   setSleepTime: (date: string, time: string) => void;
   
   updateDailyScore: (date: string) => void;
+  nukeDatabase: () => Promise<void>;
 }
+
+const initialAppState = {
+  goals: [],
+  hourlyLogs: [],
+  sleepLogs: [],
+  dailyScores: [],
+  streak: 0,
+  lastLogTime: null,
+};
 
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
-      goals: [],
-      hourlyLogs: [],
-      sleepLogs: [],
-      dailyScores: [],
-      streak: 0,
-      lastLogTime: null,
+      ...initialAppState,
 
       addGoal: (goal) => set((state) => ({
         goals: [...state.goals, { ...goal, id: crypto.randomUUID(), created_at: new Date().toISOString() }]
@@ -135,7 +140,13 @@ export const useStore = create<AppState>()(
           return { dailyScores: state.dailyScores.map(d => d.date === date ? newScore : d) };
         }
         return { dailyScores: [...state.dailyScores, newScore] };
-      })
+      }),
+
+      nukeDatabase: async () => {
+        await storage.removeItem('grind-storage');
+        localStorage.removeItem('grind-storage');
+        set({ ...initialAppState });
+      }
     }),
     {
       name: 'grind-storage',

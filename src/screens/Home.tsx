@@ -6,11 +6,24 @@ import { Clock, Zap, AlertTriangle, Mic, MicOff, Ghost } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
+const CHECK_IN_INTERVAL_MINUTES = 60;
+
+function getMinutesUntilNextCheckIn(lastLogTimestamp?: string) {
+  if (!lastLogTimestamp) return CHECK_IN_INTERVAL_MINUTES;
+
+  const lastLogTime = new Date(lastLogTimestamp).getTime();
+  if (Number.isNaN(lastLogTime)) return CHECK_IN_INTERVAL_MINUTES;
+
+  const elapsedMinutes = Math.floor((Date.now() - lastLogTime) / (1000 * 60));
+  return Math.max(CHECK_IN_INTERVAL_MINUTES - elapsedMinutes, 0);
+}
+
 export function Home() {
   const { streak, hourlyLogs, addHourlyLog, goals, sleepLogs } = useStore();
+  const lastLog = hourlyLogs[hourlyLogs.length - 1];
   const [logText, setLogText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [nextPing, setNextPing] = useState(60);
+  const [nextPing, setNextPing] = useState(() => getMinutesUntilNextCheckIn(lastLog?.timestamp));
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
   const navigate = useNavigate();
@@ -21,7 +34,6 @@ export function Home() {
     }
   }, [goals, navigate]);
 
-  const lastLog = hourlyLogs[hourlyLogs.length - 1];
   const today = format(new Date(), 'yyyy-MM-dd');
   const todaySleep = sleepLogs.find(l => l.date === today);
 
@@ -36,11 +48,14 @@ export function Home() {
     : null;
 
   useEffect(() => {
+    setNextPing(getMinutesUntilNextCheckIn(lastLog?.timestamp));
+
     const timer = setInterval(() => {
-      setNextPing(prev => prev > 0 ? prev - 1 : 60);
+      setNextPing(getMinutesUntilNextCheckIn(lastLog?.timestamp));
     }, 60000); // every minute
+
     return () => clearInterval(timer);
-  }, []);
+  }, [lastLog?.timestamp]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +83,7 @@ export function Home() {
     });
 
     setLogText('');
-    setNextPing(60);
+    setNextPing(CHECK_IN_INTERVAL_MINUTES);
 
     // Background analysis
     const analysis = await analyzeLogEntry(logText, hourlyLogs, goals, todaySleep?.wake_time || null, ghostScore);
